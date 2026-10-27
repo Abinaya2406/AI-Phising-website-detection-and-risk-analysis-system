@@ -354,6 +354,10 @@ class MLPhishingService:
         for idx, feat_name in enumerate(FEATURE_NAMES):
             val = numeric_features[feat_name]
             phi = float(shap_vector[idx])
+            rounded_phi = round(phi, 3)
+            if rounded_phi == 0.0:
+                rounded_phi = 0.0
+            sign = "positive" if rounded_phi >= 0.0 else "negative"
             meta = FEATURE_METADATA.get(feat_name, {"label": feat_name, "description": ""})
 
             shap_features.append({
@@ -364,10 +368,10 @@ class MLPhishingService:
                 "featureName": feat_name,
                 "measured_value": val,
                 "measuredValue": val,
-                "impact": round(phi, 3),
-                "shap_value": round(phi, 3),
-                "shapValue": round(phi, 3),
-                "sign": "positive" if phi >= 0 else "negative",
+                "impact": rounded_phi,
+                "shap_value": rounded_phi,
+                "shapValue": rounded_phi,
+                "sign": sign,
                 "description": meta["description"],
             })
 

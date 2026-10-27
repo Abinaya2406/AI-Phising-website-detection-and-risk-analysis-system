@@ -94,10 +94,21 @@ python run.py
 ```
 The server will bind to `http://0.0.0.0:8000` (API root: `http://localhost:8000/api`).
 
-### 6. Run Automated Test Suite
+### 6. Run Automated Test Suite (30 Tests)
 ```powershell
 pytest -v
 ```
+
+---
+
+## 🧠 Feature 1: Explainable AI (SHAP & LIME Engine)
+
+- **Machine Learning Architecture:** Scikit-Learn `RandomForestClassifier` trained on curated benchmark vectors across 16 URL features.
+- **SHAP Integration:** Native `shap.TreeExplainer` computing feature Shapley contributions $\phi_i$ relative to model expected value.
+- **Factor Separation:** Directional separation into positive (+risk) and negative (-risk) contributors.
+- **Empirical Grounding:** Physical evidence (e.g. measured entropy, raw IP detection, keyword hits, directory depth) is strictly segregated from model probability.
+- **Methodology Transparency:** Explicit disclaimers clarifying that SHAP explains model behavior and decision weights rather than definitive forensic proof.
+- **Persistence:** Automatic MongoDB caching in `risk_assessments` and on-demand fallback computation.
 
 ---
 

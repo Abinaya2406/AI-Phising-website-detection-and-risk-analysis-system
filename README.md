@@ -47,7 +47,7 @@ AI-Phising-website-detection-and-risk-analysis-system/
 │   │       ├── logger.py                   # Structured audit logging
 │   │       ├── responses.py                # Uniform JSON API envelopes
 │   │       └── security.py                 # SSRF prevention & redirect hop validation
-│   ├── tests/                              # Automated Pytest Suite (25 Tests)
+│   ├── tests/                              # Automated Pytest Suite (30 Tests)
 │   ├── uploads/                            # Quarantined screenshot uploads
 │   ├── .env.example
 │   ├── .env
@@ -96,7 +96,7 @@ python run.py
 ```
 > The API server starts on **`http://localhost:8000/api`**.
 
-#### Run Backend Test Suite (25 Tests)
+#### Run Backend Test Suite (30 Tests)
 ```powershell
 pytest -v
 ```
@@ -114,8 +114,24 @@ npm install
 
 # Start Vite development server
 npm run dev
+
+# Run Production Build
+npm run build
 ```
 > The web application opens on **`http://localhost:5173`**.
+
+---
+
+## 🧠 Feature 1: Explainable AI (XAI) — Why Is This Website Dangerous?
+
+PhishGuard AI incorporates native model interpretability so security analysts and users understand *why* a website was classified as dangerous:
+- **Baseline Machine Learning:** Trained Scikit-Learn `RandomForestClassifier` on 16 lexical, domain, syntax, and credential URL features.
+- **SHAP Integration:** Native `shap.TreeExplainer` calculates exact Shapley values ($\phi_i$) for every feature, decomposing the delta from the base value $E[f(X)]$ to the predicted probability.
+- **Directional Separation:** Quantifies and visualizes both **Risk-Increasing Factors (+Risk)** and **Risk-Mitigating Factors (-Risk)**.
+- **Physical Evidence Separation:** Strictly separates model-based attributions from measured, empirical URL evidence (e.g. actual character length, subdomain depth, detected port, credential tokens).
+- **LIME & Decision Paths:** Provides token-level attention weights for sensitive keywords and transparent decision tree node traversal.
+- **Persistence:** Stored in MongoDB collection `risk_assessments` and pre-computed during `POST /api/scan`.
+- **UI Dashboard:** Interactive Recharts horizontal bar chart, dual positive/negative evidence cards, and clear methodology disclaimers.
 
 ---
 
