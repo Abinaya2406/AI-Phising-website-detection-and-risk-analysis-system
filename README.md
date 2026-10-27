@@ -47,7 +47,7 @@ AI-Phising-website-detection-and-risk-analysis-system/
 │   │       ├── logger.py                   # Structured audit logging
 │   │       ├── responses.py                # Uniform JSON API envelopes
 │   │       └── security.py                 # SSRF prevention & redirect hop validation
-│   ├── tests/                              # Automated Pytest Suite (30 Tests)
+│   ├── tests/                              # Automated Pytest Suite (35 Tests)
 │   ├── uploads/                            # Quarantined screenshot uploads
 │   ├── .env.example
 │   ├── .env
@@ -96,7 +96,7 @@ python run.py
 ```
 > The API server starts on **`http://localhost:8000/api`**.
 
-#### Run Backend Test Suite (30 Tests)
+#### Run Backend Test Suite (35 Tests)
 ```powershell
 pytest -v
 ```
@@ -132,6 +132,20 @@ PhishGuard AI incorporates native model interpretability so security analysts an
 - **LIME & Decision Paths:** Provides token-level attention weights for sensitive keywords and transparent decision tree node traversal.
 - **Persistence:** Stored in MongoDB collection `risk_assessments` and pre-computed during `POST /api/scan`.
 - **UI Dashboard:** Interactive Recharts horizontal bar chart, dual positive/negative evidence cards, and clear methodology disclaimers.
+
+---
+
+## 👁️ Feature 2: Screenshot Phishing Detection & Brand Impersonation Analysis
+
+Feature 2 provides visual and structural forensic inspection of web page screenshots:
+- **Multi-Format Image Ingestion:** Secure upload for PNG, JPG, JPEG, and WebP (up to 10MB) with strict magic-bytes signature verification and Pillow decompression checks.
+- **Perceptual Hashing:** Generates 64-bit Difference Hashes (dHash), Average Hashes (aHash), and 2D DCT Perceptual Hashes (pHash) to compute Hamming distances invariant to minor compression artifacts.
+- **Dominant Color Palette Clustering:** K-Means clustering extracts primary and accent color centroids in RGB space, computing weighted proximity to corporate brand palettes.
+- **Verified Benchmark Reference Database:** Built-in verified reference profiles for high-profile spoofed brands (PayPal, Microsoft 365, Google LLC, JPMorgan Chase, Apple Inc., Amazon.com).
+- **Canonical Domain Impersonation Gate:** Compares destination URL against the brand's verified canonical domain whitelist. Distinguishes authentic login portals from dangerous domain impersonators.
+- **Textual & Urgency Detection:** Identifies credential harvesting prompts and psychological coercion triggers ("account suspended", "verify immediately", "unauthorized activity").
+- **Isolated Headless Live Capture:** Server-side viewport snapshot synthesis for verified safe URLs, enforced with strict SSRF defense, 5s timeout, and 3-hop redirect inspection.
+- **Transparent Limitations:** Clearly documents vision boundaries, noting that dynamic JavaScript canvas obfuscation and iframe overlays require runtime sandbox execution.
 
 ---
 

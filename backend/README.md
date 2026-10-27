@@ -94,7 +94,7 @@ python run.py
 ```
 The server will bind to `http://0.0.0.0:8000` (API root: `http://localhost:8000/api`).
 
-### 6. Run Automated Test Suite (30 Tests)
+### 6. Run Automated Test Suite (35 Tests)
 ```powershell
 pytest -v
 ```
@@ -109,6 +109,19 @@ pytest -v
 - **Empirical Grounding:** Physical evidence (e.g. measured entropy, raw IP detection, keyword hits, directory depth) is strictly segregated from model probability.
 - **Methodology Transparency:** Explicit disclaimers clarifying that SHAP explains model behavior and decision weights rather than definitive forensic proof.
 - **Persistence:** Automatic MongoDB caching in `risk_assessments` and on-demand fallback computation.
+
+---
+
+## 👁️ Feature 2: Screenshot Phishing & Brand Impersonation Analysis
+
+- **Visual Processing Pipeline:** Multi-format image ingestion (PNG, JPG, JPEG, WebP up to 10MB) with strict magic-bytes verification and PIL integrity checks.
+- **Perceptual Hashing:** Difference Hashing (dHash), Average Hashing (aHash), and 2D DCT Perceptual Hashing (pHash) producing 64-bit structural fingerprints.
+- **Dominant Color Palette Clustering:** K-Means clustering and frequency binning in RGB space with weighted brand proximity matching.
+- **Verified Benchmark Reference Database:** Built-in verified reference profiles for high-profile targeted brands: PayPal, Microsoft 365, Google LLC, JPMorgan Chase, Apple Inc., and Amazon.com.
+- **Canonical Domain Impersonation Gate:** Enforces canonical root domain checks to distinguish genuine enterprise portals from unauthorized domain impersonators.
+- **Textual & Urgency Detection:** Psychological coercion heuristics detecting account restriction and immediate verification alerts.
+- **Isolated Live Webpage Capture:** Server-side headless viewport snapshot generation with strict SSRF defense, timeouts, and redirect hop validation.
+- **Database Persistence:** Analysis records stored in MongoDB `screenshots` collection with dual snake_case and camelCase serialization.
 
 ---
 

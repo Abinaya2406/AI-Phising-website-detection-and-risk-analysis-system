@@ -8,31 +8,58 @@ import { DEMO_SCREENSHOT_ANALYSIS } from './mockData';
 export async function analyzeScreenshot({ file, targetUrl }) {
   if (!getDemoMode()) {
     try {
-      const formData = new FormData();
+      let res;
       if (file) {
+        const formData = new FormData();
         formData.append('file', file);
+        if (targetUrl) {
+          formData.append('targetUrl', targetUrl);
+        }
+        res = await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.SCREENSHOT_ANALYZE}`, {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        res = await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.SCREENSHOT_ANALYZE}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ targetUrl }),
+        });
       }
-      if (targetUrl) {
-        formData.append('targetUrl', targetUrl);
-      }
-
-      const res = await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.SCREENSHOT_ANALYZE}`, {
-        method: 'POST',
-        body: formData,
-      });
 
       if (!res.ok) {
-        throw new Error(`Screenshot analysis failed (${res.status})`);
+        const errJson = await res.json().catch(() => ({}));
+        const errMsg = errJson?.error?.message || errJson?.message || `Screenshot analysis failed (${res.status})`;
+        throw new Error(errMsg);
       }
-      const data = await res.json();
-      return { ...data, isDemo: false };
+
+      const json = await res.json();
+      const payload = json.data || json;
+
+      let preview = payload.previewUrl || payload.preview_url;
+      if (preview && preview.startsWith('/api')) {
+        preview = `${getApiBaseUrl()}${preview}`;
+      } else if (file) {
+        try {
+          preview = URL.createObjectURL(file);
+        } catch (_) {}
+      }
+
+      return {
+        ...payload,
+        previewUrl: preview,
+        isDemo: false,
+      };
     } catch (err) {
-      console.warn('Backend screenshot analysis failed, using demo simulation:', err.message);
+      console.warn('Backend screenshot analysis error:', err.message);
+      throw err;
     }
   }
 
   // Demo fallback
-  await new Promise((resolve) => setTimeout(resolve, 1600));
+  await new Promise((resolve) => setTimeout(resolve, 1400));
 
   let previewUrl = DEMO_SCREENSHOT_ANALYSIS.heatmapUrl;
   if (file) {
@@ -50,3 +77,18 @@ export async function analyzeScreenshot({ file, targetUrl }) {
   };
 }
 
+/**
+ * Retrieve verified reference brand benchmark profiles
+ */
+export async function getReferenceBrands() {
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/api/screenshot/reference-brands`);
+    if (res.ok) {
+      const json = await res.json();
+      return json.data || [];
+    }
+  } catch (e) {
+    console.warn('Could not load reference brands:', e.message);
+  }
+  return [];
+}
