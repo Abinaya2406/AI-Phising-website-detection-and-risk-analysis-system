@@ -26,3 +26,14 @@ dist-ssr
 .env
 .env.production
 
+
+# Python virtual environments & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.pytest_cache/
+uploads/
+*.sqlite3
