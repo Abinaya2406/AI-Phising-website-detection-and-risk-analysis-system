@@ -44,16 +44,22 @@ def scan_endpoint():
     )
     db_manager.get_collection("scan_history").insert_one(doc)
 
-    # Persist in risk_assessments collection
-    risk_doc = RiskAssessmentModel.create(
-        scan_id=doc["id"],
-        risk_score=doc["risk_score"],
-        model_version="Scikit-Learn Ensemble XGBoost + Lexical Heuristics v1.4",
-        confidence=round(doc["risk_score"] / 100.0, 2),
-        feature_contributions=list(doc["heuristic_features"].keys()),
-        decision_path=["Length Check", "Subdomain Check", "Entropy Evaluation"]
-    )
-    db_manager.get_collection("risk_assessments").insert_one(risk_doc)
+    # Persist full SHAP explanation in risk_assessments collection
+    from app.services.xai_service import xai_service
+    try:
+        explanation = xai_service.generate_explanation(doc["url"], doc["id"])
+        db_manager.get_collection("risk_assessments").insert_one(explanation)
+    except Exception as e:
+        # Fallback basic document if XAI pre-generation encounters an issue
+        risk_doc = RiskAssessmentModel.create(
+            scan_id=doc["id"],
+            risk_score=doc["risk_score"],
+            model_version="RandomForest Classifier + SHAP TreeExplainer v2.0",
+            confidence=round(doc["risk_score"] / 100.0, 2),
+            feature_contributions=list(doc["heuristic_features"].keys()),
+            decision_path=["Length Check", "Subdomain Check", "Entropy Evaluation"]
+        )
+        db_manager.get_collection("risk_assessments").insert_one(risk_doc)
 
     # Return document directly compatible with frontend contracts
     return api_response(data=doc, message="Scan completed successfully.", status_code=200)

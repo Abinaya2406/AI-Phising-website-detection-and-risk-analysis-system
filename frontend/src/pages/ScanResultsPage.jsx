@@ -119,7 +119,7 @@ export default function ScanResultsPage() {
             variant="outline"
             size="sm"
             icon={Cpu}
-            onClick={() => navigate(`/xai?id=${scan.id}`)}
+            onClick={() => navigate(`/xai?id=${scan.id || ''}&url=${encodeURIComponent(scan.url || '')}`)}
           >
             Explain with XAI
           </Button>
