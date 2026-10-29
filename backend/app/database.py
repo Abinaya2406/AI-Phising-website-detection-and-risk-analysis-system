@@ -49,6 +49,11 @@ class InMemoryCollection:
                 if self._matches(item, filter_query):
                     if "$set" in update_doc:
                         item.update(update_doc["$set"])
+                    if "$inc" in update_doc:
+                        for inc_k, inc_v in update_doc["$inc"].items():
+                            item[inc_k] = item.get(inc_k, 0) + inc_v
+                    if "$set" not in update_doc and "$inc" not in update_doc:
+                        item.update(update_doc)
                     break
 
     def delete_one(self, filter_query: Dict[str, Any]):
@@ -57,6 +62,11 @@ class InMemoryCollection:
                 del self.documents[idx]
                 return True
         return False
+
+    def delete_many(self, filter_query: Dict[str, Any]) -> int:
+        initial_len = len(self.documents)
+        self.documents = [d for d in self.documents if not self._matches(d, filter_query)]
+        return initial_len - len(self.documents)
 
     def count_documents(self, filter_query: Optional[Dict[str, Any]] = None) -> int:
         return len(self.find(filter_query))

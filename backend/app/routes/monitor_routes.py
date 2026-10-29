@@ -1,8 +1,9 @@
-"""Website Monitoring & Change History API endpoints."""
+"""Website Monitoring, Periodic Probes, Change History, and Scheduler API endpoints."""
 from flask import Blueprint, request
 from app.utils.responses import api_response, api_error
 from app.utils.exceptions import ValidationError, SSRFError
 from app.services.monitoring_service import monitoring_service
+from app.services.scheduler_service import scheduler_service
 
 monitor_bp = Blueprint("monitor", __name__, url_prefix="/api")
 
@@ -15,7 +16,12 @@ def list_monitors():
     List all websites enrolled in continuous monitoring.
     """
     targets = monitoring_service.list_targets()
-    return api_response(data=targets, message=f"Retrieved {len(targets)} monitored target(s).")
+    scheduler_info = scheduler_service.get_status()
+    return api_response(
+        data=targets,
+        meta={"scheduler": scheduler_info},
+        message=f"Retrieved {len(targets)} monitored target(s)."
+    )
 
 
 @monitor_bp.route("/monitor", methods=["POST"])
@@ -23,7 +29,8 @@ def list_monitors():
 def add_monitor():
     """
     POST /api/monitor & POST /api/monitoring/targets
-    Enroll a new web asset for 24/7 defacement & SSL integrity monitoring.
+    Enroll a new web asset for 24/7 defacement, credential form injection & SSL integrity monitoring.
+    Captures an initial baseline snapshot upon enrollment.
     """
     data = request.get_json(silent=True) or {}
     url = data.get("url")
@@ -35,18 +42,40 @@ def add_monitor():
 
     try:
         new_target = monitoring_service.add_target(name=name, url=url, check_interval=check_interval)
-        return api_response(data=new_target, message="Target successfully enrolled in monitoring.", status_code=201)
+        return api_response(data=new_target, message="Target successfully enrolled in monitoring with baseline captured.", status_code=201)
     except (ValidationError, SSRFError) as e:
         return api_error(message=e.message, error_type=e.__class__.__name__, status_code=e.status_code)
     except Exception as e:
         return api_error(message=f"Failed to add monitor: {str(e)}", error_type="MonitorError", status_code=500)
 
 
+@monitor_bp.route("/monitor/<target_id>", methods=["GET"])
+def get_monitor(target_id):
+    """
+    GET /api/monitor/<id>
+    Retrieve full configuration and status details for a specific monitored target.
+    """
+    target = monitoring_service.get_target(target_id)
+    if not target:
+        return api_error(message=f"Monitored target with ID '{target_id}' not found.", error_type="ResourceNotFound", status_code=404)
+
+    changes = monitoring_service.get_changes(target_id)
+    snapshots = monitoring_service.get_snapshots(target_id, limit=5)
+    return api_response(
+        data={
+            "target": target,
+            "timeline": changes,
+            "recent_snapshots": snapshots
+        },
+        message="Target retrieved successfully."
+    )
+
+
 @monitor_bp.route("/monitor/<target_id>", methods=["PATCH"])
 def update_monitor(target_id):
     """
     PATCH /api/monitor/<id>
-    Update configuration attributes for a monitored website target.
+    Update configuration attributes (name, check interval) for a monitored target.
     """
     data = request.get_json(silent=True) or {}
     updated = monitoring_service.update_target(target_id, data)
@@ -56,12 +85,53 @@ def update_monitor(target_id):
     return api_response(data=updated, message="Monitored target updated successfully.")
 
 
+@monitor_bp.route("/monitor/<target_id>/pause", methods=["POST"])
+def pause_monitor(target_id):
+    """
+    POST /api/monitor/<id>/pause
+    Pause scheduled monitoring checks for a web asset.
+    """
+    updated = monitoring_service.pause_target(target_id)
+    if not updated:
+        return api_error(message=f"Monitored target with ID '{target_id}' not found.", error_type="ResourceNotFound", status_code=404)
+
+    return api_response(data=updated, message="Target monitoring paused successfully.")
+
+
+@monitor_bp.route("/monitor/<target_id>/resume", methods=["POST"])
+def resume_monitor(target_id):
+    """
+    POST /api/monitor/<id>/resume
+    Resume scheduled monitoring checks for a paused web asset.
+    """
+    updated = monitoring_service.resume_target(target_id)
+    if not updated:
+        return api_error(message=f"Monitored target with ID '{target_id}' not found.", error_type="ResourceNotFound", status_code=404)
+
+    return api_response(data=updated, message="Target monitoring resumed successfully.")
+
+
+@monitor_bp.route("/monitor/<target_id>/check", methods=["POST"])
+def check_monitor_now(target_id):
+    """
+    POST /api/monitor/<id>/check
+    Trigger an immediate on-demand integrity probe check against the target.
+    """
+    try:
+        result = monitoring_service.execute_target_check(target_id)
+        return api_response(data=result, message="Integrity check completed successfully.")
+    except ValidationError as e:
+        return api_error(message=e.message, error_type="ValidationError", status_code=404)
+    except Exception as e:
+        return api_error(message=f"Check probe execution failed: {str(e)}", error_type="ProbeError", status_code=500)
+
+
 @monitor_bp.route("/monitor/<target_id>", methods=["DELETE"])
 @monitor_bp.route("/monitoring/targets/<target_id>", methods=["DELETE"])
 def delete_monitor(target_id):
     """
     DELETE /api/monitor/<id> & DELETE /api/monitoring/targets/<id>
-    Remove a web asset from continuous monitoring.
+    Remove a web asset from continuous monitoring and clean up associated snapshots.
     """
     success = monitoring_service.delete_target(target_id)
     if not success:
@@ -74,7 +144,7 @@ def delete_monitor(target_id):
 def get_monitor_changes(target_id):
     """
     GET /api/monitor/<id>/changes
-    Retrieve the historical audit log of DOM & content alterations for a target.
+    Retrieve the historical audit log and timeline of DOM, form, SSL, and risk score shifts.
     """
     target = monitoring_service.get_target(target_id)
     if not target:
@@ -83,3 +153,45 @@ def get_monitor_changes(target_id):
     changes = monitoring_service.get_changes(target_id)
     return api_response(data=changes, message=f"Retrieved {len(changes)} change log record(s).")
 
+
+@monitor_bp.route("/monitor/<target_id>/snapshots", methods=["GET"])
+def get_monitor_snapshots(target_id):
+    """
+    GET /api/monitor/<id>/snapshots
+    Retrieve recent snapshots for forensic timeline inspection.
+    """
+    target = monitoring_service.get_target(target_id)
+    if not target:
+        return api_error(message=f"Monitored target with ID '{target_id}' not found.", error_type="ResourceNotFound", status_code=404)
+
+    limit = int(request.args.get("limit", 20))
+    snapshots = monitoring_service.get_snapshots(target_id, limit=limit)
+    return api_response(data=snapshots, message=f"Retrieved {len(snapshots)} snapshot record(s).")
+
+
+@monitor_bp.route("/monitor/scheduler/status", methods=["GET"])
+def get_scheduler_status():
+    """
+    GET /api/monitor/scheduler/status
+    Get real-time operational status of the background monitoring scheduler.
+    """
+    status = scheduler_service.get_status()
+    return api_response(data=status, message="Scheduler status retrieved successfully.")
+
+
+@monitor_bp.route("/monitor/scheduler/toggle", methods=["POST"])
+def toggle_scheduler():
+    """
+    POST /api/monitor/scheduler/toggle
+    Enable or disable the background scheduler worker thread.
+    """
+    data = request.get_json(silent=True) or {}
+    action = data.get("action", "toggle").lower()
+
+    current_status = scheduler_service.get_status()
+    if action == "start" or (action == "toggle" and not current_status["is_running"]):
+        scheduler_service.start()
+    elif action == "stop" or (action == "toggle" and current_status["is_running"]):
+        scheduler_service.stop()
+
+    return api_response(data=scheduler_service.get_status(), message="Scheduler state updated.")

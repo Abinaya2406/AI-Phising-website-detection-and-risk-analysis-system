@@ -76,6 +76,11 @@ def create_app(config_name: str = None) -> Flask:
         logger.error(f"Internal server error: {str(e)}")
         return api_error(message="Internal Server Error: An unexpected error occurred.", error_type="InternalServerError", status_code=500)
 
+    # Initialize Background Monitoring Scheduler
+    from app.services.scheduler_service import scheduler_service
+    if not app.config.get("TESTING"):
+        scheduler_service.start()
+
     logger.info(f"PhishGuard AI Backend initialized in '{config_name}' mode.")
     return app
 
