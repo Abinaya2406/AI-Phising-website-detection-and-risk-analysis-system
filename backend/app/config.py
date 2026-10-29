@@ -31,6 +31,14 @@ class Config:
     ENABLE_DEMO_DATA_FALLBACK = os.environ.get("ENABLE_DEMO_DATA_FALLBACK", "true").lower() == "true"
     TESTING = False
 
+    # AI Security Assistant (Feature 4)
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+    AI_API_KEY = os.environ.get("AI_API_KEY") or GEMINI_API_KEY or OPENAI_API_KEY
+    AI_PROVIDER = os.environ.get("AI_PROVIDER", "auto").lower()  # 'gemini', 'openai', 'auto', 'fallback'
+    AI_MODEL = os.environ.get("AI_MODEL", "gemini-1.5-flash")
+    AI_TIMEOUT_SECONDS = int(os.environ.get("AI_TIMEOUT_SECONDS", 8))
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

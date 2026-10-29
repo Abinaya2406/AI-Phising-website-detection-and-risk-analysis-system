@@ -183,6 +183,41 @@ PhishGuard AI features an adaptive multi-vector risk scoring engine and evidence
 
 ---
 
+## 🤖 Feature 4: Tamil and English AI Security Assistant
+
+PhishGuard AI features an enterprise-grade **Bilingual AI Cybersecurity Intelligence Assistant** engineered to provide transparent, context-aware threat advisory in both **English** and **Tamil (தமிழ்)**:
+
+- **Scan-Grounded Contextual Reasoning:**
+  - Users can select any completed scan record or ask questions about a current target URL.
+  - The assistant extracts and synthesizes the website's exact physical scan evidence (cryptographic SSL certificates, domain intelligence, brand impersonation vectors, DOM password form behavior, and third-party threat feeds).
+- **Core Forensic Inquiries Supported:**
+  1. **"Why is this website dangerous?" / "இந்த இணையதளம் ஏன் ஆபத்தானது?"**:
+     - Decomposes verified physical threat signals (e.g., active password harvesting forms posting cross-origin, Free DV certificate abuse, high character entropy, or confirmed blocklist hits).
+  2. **"Why did the risk score increase?" / "இடர் மதிப்பீடு ஏன் அதிகரித்தது?"**:
+     - Explains the multi-vector adaptive score escalation across the 5 orthogonal dimensions, breaking down each vector's weight contribution.
+  3. **"How can I identify the official website?" / "அதிகாரப்பூர்வ இணையதளத்தை எவ்வாறு கண்டறிவது?"**:
+     - Verifies canonical root domains against genuine corporate reference registries (PayPal, Microsoft 365, Google, Chase, SBI, HDFC).
+     - Educates users on spotting deceptive lookalike subdomains, inspecting OV/EV certificates, and avoiding sponsored search ads.
+  4. **"What should I do if I entered my password?" / "எனது கடவுச்சொல்லை உள்ளிட்டிருந்தால் நான் என்ன செய்ய வேண்டும்?"**:
+     - Delivers an actionable 5-step emergency incident response containment protocol: immediate password reset on the canonical portal, revocation of active OAuth sessions, 2FA/MFA audit, banking/card freeze notifications, and cybercrime reporting (1930 / cybercrime.gov.in).
+  5. **"What precautions should I take?" / "நான் என்ன முன்னெச்சரிக்கை நடவடிக்கைகளை எடுக்க வேண்டும்?"**:
+     - Provides clear, risk-calibrated defensive measures tailored to the site's classification category.
+- **Strict Credential Safety Guardrails:**
+  - **Zero Credential Collection Policy**: The assistant **NEVER** solicits, collects, or stores passwords, OTPs, PINs, or private tokens.
+  - If a user inadvertently pastes credentials or secret tokens, the assistant immediately intercepts the message, refuses credential acceptance, and triggers the emergency compromise containment protocol.
+- **Epistemic Uncertainty & Anti-Hallucination:**
+  - Strictly distinguishes measured physical observations from unobserved attributes.
+  - In accordance with Zero-Trust principles, **absence of an observed flag is never treated as proof of safety**.
+  - Clearly computes and displays an explicit Epistemic Uncertainty Note (e.g. `±8 pts Uncertainty Margin | 85% Evidence Completeness`).
+- **Dual Engine Architecture (External AI + Rule-Based Fallback):**
+  - **External AI Integration (Optional)**: Supports Google Gemini (`gemini-1.5-flash`) or OpenAI (`gpt-4o-mini`) via secure server-side environment variables (`GEMINI_API_KEY`, `OPENAI_API_KEY`, or `AI_API_KEY`). Keys are never exposed to the frontend.
+  - **Forensic Rule-Based Evidence Engine**: Operates completely offline without external API keys or network dependencies, providing comprehensive, grammatically natural Tamil and English guidance.
+- **Frontend Chat Interface:**
+  - Dedicated **`SecurityAssistantPage`** featuring dual-pill language selector (English <-> தமிழ்), active scan context picker and status banner, contextual prompt suggestion chips, markdown rendering, evidence pills, precaution checklists, and copy controls.
+  - Seamlessly linked from **`ScanResultsPage`** via the "Ask Assistant" action button and an interactive AI Security Consultation card.
+
+---
+
 ## 📡 Complete Backend API Specification
 
 | Method | Endpoint | Description |
@@ -205,6 +240,7 @@ PhishGuard AI features an adaptive multi-vector risk scoring engine and evidence
 | `GET` | `/api/monitor/<id>/changes` | Retrieves DOM alteration logs and hash diffs |
 | `GET` | `/api/alerts` | Lists defacement, impersonation, and SSL expiration alerts |
 | `POST` | `/api/assistant/chat` | Bilingual conversational AI advisor (**English** & **Tamil**) |
+| `GET` | `/api/assistant/presets` | Context-aware suggested prompt questions in English & Tamil |
 
 ---
 

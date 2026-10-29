@@ -16,6 +16,8 @@ import {
   GitCompare,
   ArrowRight,
   ExternalLink,
+  Bot,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getScanDetails } from '../services/scanService';
@@ -129,6 +131,15 @@ export default function ScanResultsPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Bot}
+            onClick={() => navigate(`/assistant?id=${scan.id || ''}`)}
+            className="border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10"
+          >
+            Ask Assistant
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -318,6 +329,61 @@ export default function ScanResultsPage() {
 
       {/* Feature 3: Full Multi-Vector Evidence Breakdown Card */}
       <EvidenceBreakdownCard adaptiveRisk={scan.adaptive_risk} />
+
+      {/* Feature 4: Interactive AI Security Assistant Consultation */}
+      <Card
+        title="Bilingual AI Security Assistant Consultation (Tamil & English)"
+        subtitle="Ask context-grounded cybersecurity questions regarding this completed website scan"
+        icon={Bot}
+        className="border-cyan-500/30 bg-gradient-to-r from-cyber-card to-cyan-950/20"
+      >
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1.5 flex-1">
+            <p className="text-xs text-slate-300">
+              Query our AI security advisor in <span className="text-cyan-400 font-bold">English</span> or <span className="text-cyan-400 font-bold">தமிழ்</span> to break down specific threat evidence, understand score increases, identify authentic brand portals, or get emergency password incident guidance.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => navigate(`/assistant?id=${scan.id || ''}`)}
+                className="text-xs px-3 py-1 rounded-full bg-cyber-darkest border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/20 transition-all font-mono"
+              >
+                ❓ Why is this website dangerous?
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/assistant?id=${scan.id || ''}`)}
+                className="text-xs px-3 py-1 rounded-full bg-cyber-darkest border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/20 transition-all font-mono"
+              >
+                ❓ இந்த இணையதளம் ஏன் ஆபத்தானது?
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/assistant?id=${scan.id || ''}`)}
+                className="text-xs px-3 py-1 rounded-full bg-cyber-darkest border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/20 transition-all font-mono"
+              >
+                ❓ Why did the risk score increase?
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/assistant?id=${scan.id || ''}`)}
+                className="text-xs px-3 py-1 rounded-full bg-cyber-darkest border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/20 transition-all font-mono"
+              >
+                ❓ What should I do if I entered my password?
+              </button>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            icon={Bot}
+            onClick={() => navigate(`/assistant?id=${scan.id || ''}`)}
+            className="flex-shrink-0"
+          >
+            Launch AI Assistant
+          </Button>
+        </div>
+      </Card>
 
       {/* Scan Comparison Modal */}
       <ScanComparisonModal
