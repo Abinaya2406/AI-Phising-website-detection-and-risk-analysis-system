@@ -13,6 +13,7 @@ import {
   Camera,
   Activity,
   AlertTriangle,
+  GitCompare,
   ArrowRight,
   ExternalLink,
 } from 'lucide-react';
@@ -24,7 +25,9 @@ import Button from '../components/common/Button';
 import RiskGauge from '../components/common/RiskGauge';
 import DemoBadge from '../components/common/DemoBadge';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { formatDate } from '../utils/formatters';
+import EvidenceBreakdownCard from '../components/scanner/EvidenceBreakdownCard';
+import ScanComparisonModal from '../components/scanner/ScanComparisonModal';
+import { formatDate, getRiskMeta } from '../utils/formatters';
 
 export default function ScanResultsPage() {
   const [searchParams] = useSearchParams();
@@ -33,6 +36,7 @@ export default function ScanResultsPage() {
   const [scan, setScan] = useState(currentScan);
   const [loading, setLoading] = useState(!currentScan && Boolean(scanId));
   const [copied, setCopied] = useState(false);
+  const [compareModalOpen, setCompareModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -82,8 +86,15 @@ export default function ScanResultsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const isPhishing = scan.riskScore > 69;
-  const isSuspicious = scan.riskScore > 30 && scan.riskScore <= 69;
+  const riskScore = scan.adaptive_risk?.adaptive_risk_score ?? scan.risk_score ?? scan.riskScore ?? 0;
+  const riskMeta = getRiskMeta(riskScore);
+  const categoryKey = scan.adaptive_risk?.risk_category?.key || riskMeta.key;
+  const categoryLabel = scan.adaptive_risk?.risk_category?.label || riskMeta.label;
+
+  const badgeVariant =
+    categoryKey === 'critical' ? 'danger' :
+    categoryKey === 'high' ? 'danger' :
+    categoryKey === 'medium' ? 'warning' : 'safe';
 
   return (
     <div className="space-y-6">
@@ -91,12 +102,15 @@ export default function ScanResultsPage() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 md:p-6 rounded-2xl bg-cyber-card border border-cyber-border shadow-xl">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <Badge variant={isPhishing ? 'danger' : isSuspicious ? 'warning' : 'safe'} size="md">
-              {scan.verdict}
+            <Badge variant={badgeVariant} size="md">
+              {categoryLabel} Category
             </Badge>
+            <span className="text-xs font-mono text-slate-300 bg-cyber-darkest px-2.5 py-0.5 rounded-full border border-cyber-border">
+              Verdict: {scan.verdict || 'Analyzed'}
+            </span>
             {scan.isDemo && <DemoBadge />}
             <span className="text-xs font-mono text-slate-400">
-              Scanned: {formatDate(scan.timestamp)}
+              Scanned: {formatDate(scan.created_at || scan.timestamp)}
             </span>
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-100 font-mono break-all">
@@ -115,6 +129,14 @@ export default function ScanResultsPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={GitCompare}
+            onClick={() => setCompareModalOpen(true)}
+          >
+            Compare Scan
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -146,27 +168,32 @@ export default function ScanResultsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Risk Gauge & Target Brand */}
         <Card
-          title="Risk Assessment"
-          subtitle="Synthesized multi-heuristic model score"
+          title="Adaptive Phishing Assessment"
+          subtitle="Multi-vector calibrated risk scoring (0-100)"
           icon={ShieldAlert}
           className="flex flex-col justify-between"
         >
-          <div className="py-4">
-            <RiskGauge score={scan.riskScore} size={200} />
+          <div className="py-2">
+            <RiskGauge
+              score={riskScore}
+              size={190}
+              completenessPct={scan.adaptive_risk?.completeness_pct}
+              uncertaintyMargin={scan.adaptive_risk?.uncertainty_margin}
+            />
           </div>
 
           <div className="mt-4 pt-4 border-t border-cyber-border/70 space-y-2.5 font-mono text-xs">
             <div className="flex justify-between items-center">
               <span className="text-cyber-muted">Targeted Entity:</span>
-              <span className="font-semibold text-slate-200">{scan.targetBrand || 'N/A'}</span>
+              <span className="font-semibold text-slate-200">{scan.target_brand || scan.targetBrand || 'N/A'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-cyber-muted">Primary Threat:</span>
-              <span className="font-semibold text-red-300">{scan.attackType || 'Clean'}</span>
+              <span className="font-semibold text-red-300">{scan.attack_type || scan.attackType || 'Clean'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-cyber-muted">Status:</span>
-              <span className="text-emerald-400 uppercase font-semibold">Analyzed</span>
+              <span className="text-cyber-muted">Classification Category:</span>
+              <span className="text-cyan-400 font-bold uppercase">{categoryLabel}</span>
             </div>
           </div>
         </Card>
@@ -183,24 +210,24 @@ export default function ScanResultsPage() {
                 <span className="text-slate-300 font-semibold flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-cyan-400" /> SSL Certificate
                 </span>
-                <Badge variant={scan.sslStatus?.isFreeCA ? 'warning' : 'safe'} size="xs">
-                  {scan.sslStatus?.isFreeCA ? 'Automated / Free CA' : 'Enterprise EV/OV'}
+                <Badge variant={scan.ssl_status?.is_free_ca || scan.sslStatus?.isFreeCA ? 'warning' : 'safe'} size="xs">
+                  {scan.ssl_status?.is_free_ca || scan.sslStatus?.isFreeCA ? 'Automated Free CA' : 'Enterprise CA'}
                 </Badge>
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11px] text-cyber-muted">
                 <div>
-                  <span className="text-slate-400">Issuer:</span> {scan.sslStatus?.issuer || 'Unknown'}
+                  <span className="text-slate-400">Issuer:</span> {scan.ssl_status?.issuer || scan.sslStatus?.issuer || 'Unknown'}
                 </div>
                 <div>
-                  <span className="text-slate-400">Cert Age:</span> {scan.sslStatus?.ageDays || 0} days
+                  <span className="text-slate-400">Cert Age:</span> {scan.ssl_status?.age_days || scan.sslStatus?.ageDays || 0} days
                 </div>
                 <div>
-                  <span className="text-slate-400">Expires in:</span> {scan.sslStatus?.expiryDays || 0} days
+                  <span className="text-slate-400">Expires in:</span> {scan.ssl_status?.expiry_days || scan.sslStatus?.expiryDays || 0} days
                 </div>
                 <div>
                   <span className="text-slate-400">Valid:</span>{' '}
-                  <span className={scan.sslStatus?.valid ? 'text-emerald-400' : 'text-red-400'}>
-                    {scan.sslStatus?.valid ? 'Yes' : 'No'}
+                  <span className={(scan.ssl_status?.valid ?? scan.sslStatus?.valid) ? 'text-emerald-400' : 'text-red-400'}>
+                    {(scan.ssl_status?.valid ?? scan.sslStatus?.valid) ? 'Yes' : 'No'}
                   </span>
                 </div>
               </div>
@@ -211,24 +238,24 @@ export default function ScanResultsPage() {
                 <span className="text-slate-300 font-semibold flex items-center gap-1.5">
                   <Server className="w-3.5 h-3.5 text-cyan-400" /> DNS & Hosting Details
                 </span>
-                <span className="text-[10px] text-cyan-400 font-bold">{scan.dnsInfo?.country || 'N/A'}</span>
+                <span className="text-[10px] text-cyan-400 font-bold">{scan.dns_info?.country || scan.dnsInfo?.country || 'N/A'}</span>
               </div>
               <div className="space-y-1.5 text-[11px] text-cyber-muted">
                 <div className="flex justify-between">
                   <span className="text-slate-400">Resolved IP:</span>
-                  <span className="text-slate-200">{scan.dnsInfo?.ip || 'N/A'}</span>
+                  <span className="text-slate-200">{scan.dns_info?.ip || scan.dnsInfo?.ip || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">ASN:</span>
-                  <span className="text-slate-200">{scan.dnsInfo?.asn || 'N/A'}</span>
+                  <span className="text-slate-200">{scan.dns_info?.asn || scan.dnsInfo?.asn || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Registrar:</span>
-                  <span className="text-slate-200">{scan.dnsInfo?.registrar || 'N/A'}</span>
+                  <span className="text-slate-200">{scan.dns_info?.registrar || scan.dnsInfo?.registrar || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Created:</span>
-                  <span className="text-slate-200">{scan.dnsInfo?.creationDate || 'N/A'}</span>
+                  <span className="text-slate-200">{scan.dns_info?.creation_date || scan.dnsInfo?.creationDate || 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -247,19 +274,19 @@ export default function ScanResultsPage() {
               <div className="font-semibold text-slate-300 mb-1">DOM Behavioral Patterns</div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-400">Password Input:</span>
-                <span className={scan.heuristicFeatures?.hasPasswordField ? 'text-red-400 font-bold' : 'text-slate-400'}>
-                  {scan.heuristicFeatures?.hasPasswordField ? 'Present (Sensitive)' : 'None'}
+                <span className={scan.heuristic_features?.has_password_field || scan.heuristicFeatures?.hasPasswordField ? 'text-red-400 font-bold' : 'text-slate-400'}>
+                  {scan.heuristic_features?.has_password_field || scan.heuristicFeatures?.hasPasswordField ? 'Present (Sensitive)' : 'None'}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-400">Form Action Target:</span>
-                <span className={scan.heuristicFeatures?.submitsToRemoteDomain ? 'text-red-400 font-bold' : 'text-emerald-400'}>
-                  {scan.heuristicFeatures?.submitsToRemoteDomain ? 'External Untrusted Host' : 'Canonical Host'}
+                <span className={scan.heuristic_features?.submits_to_remote_domain || scan.heuristicFeatures?.submitsToRemoteDomain ? 'text-red-400 font-bold' : 'text-emerald-400'}>
+                  {scan.heuristic_features?.submits_to_remote_domain || scan.heuristicFeatures?.submitsToRemoteDomain ? 'External Untrusted Host' : 'Canonical Host'}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-400">Entropy Score:</span>
-                <span className="text-slate-200">{scan.heuristicFeatures?.entropyScore || '3.5'} / 5.0</span>
+                <span className="text-slate-200">{scan.heuristic_features?.entropy_score || scan.heuristicFeatures?.entropyScore || '3.5'} / 5.0</span>
               </div>
             </div>
 
@@ -268,27 +295,36 @@ export default function ScanResultsPage() {
               <div className="font-semibold text-slate-300 mb-1">Global Threat Feeds</div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-400">VirusTotal Engines:</span>
-                <span className={scan.threatIntel?.virustotalDetections > 0 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
-                  {scan.threatIntel?.virustotalDetections || 0} detections
+                <span className={(scan.threat_intel?.virustotal_detections ?? scan.threatIntel?.virustotalDetections) > 0 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
+                  {scan.threat_intel?.virustotal_detections ?? scan.threatIntel?.virustotalDetections ?? 0} detections
                 </span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-400">Google Safe Browsing:</span>
-                <span className={scan.threatIntel?.googleSafeBrowsing?.includes('Flagged') ? 'text-red-400' : 'text-emerald-400'}>
-                  {scan.threatIntel?.googleSafeBrowsing || 'Clean'}
+                <span className={(scan.threat_intel?.google_safe_browsing || scan.threatIntel?.googleSafeBrowsing || '').includes('Flagged') ? 'text-red-400' : 'text-emerald-400'}>
+                  {scan.threat_intel?.google_safe_browsing || scan.threatIntel?.googleSafeBrowsing || 'Clean'}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-400">OpenPhish Listed:</span>
-                <span className={scan.threatIntel?.openPhishListed ? 'text-red-400 font-bold' : 'text-slate-400'}>
-                  {scan.threatIntel?.openPhishListed ? 'VERIFIED POSITIVE' : 'Not Listed'}
+                <span className={scan.threat_intel?.openphish_listed || scan.threatIntel?.openPhishListed ? 'text-red-400 font-bold' : 'text-slate-400'}>
+                  {scan.threat_intel?.openphish_listed || scan.threatIntel?.openPhishListed ? 'VERIFIED POSITIVE' : 'Not Listed'}
                 </span>
               </div>
             </div>
           </div>
         </Card>
       </div>
+
+      {/* Feature 3: Full Multi-Vector Evidence Breakdown Card */}
+      <EvidenceBreakdownCard adaptiveRisk={scan.adaptive_risk} />
+
+      {/* Scan Comparison Modal */}
+      <ScanComparisonModal
+        isOpen={compareModalOpen}
+        onClose={() => setCompareModalOpen(false)}
+        initialScanA={scan}
+      />
     </div>
   );
 }
-

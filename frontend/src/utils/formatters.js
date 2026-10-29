@@ -1,14 +1,12 @@
-import { RISK_LEVELS } from './constants';
+import { RISK_LEVELS, getRiskCategory } from './constants';
 
-export const getRiskMeta = (score) => {
-  const numeric = Math.min(100, Math.max(0, Number(score) || 0));
-  if (numeric <= RISK_LEVELS.SAFE.max) {
-    return { ...RISK_LEVELS.SAFE, score: numeric };
-  }
-  if (numeric <= RISK_LEVELS.SUSPICIOUS.max) {
-    return { ...RISK_LEVELS.SUSPICIOUS, score: numeric };
-  }
-  return { ...RISK_LEVELS.MALICIOUS, score: numeric };
+export const getRiskMeta = (score, customThresholds = null) => {
+  const numeric = Math.min(100, Math.max(0, Math.round(Number(score) || 0)));
+  const category = getRiskCategory(numeric, customThresholds);
+  return {
+    ...category,
+    score: numeric,
+  };
 };
 
 export const formatDate = (isoString) => {
@@ -53,4 +51,3 @@ export const truncateString = (str, length = 45) => {
   if (str.length <= length) return str;
   return str.slice(0, length) + '...';
 };
-

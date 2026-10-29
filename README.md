@@ -47,7 +47,7 @@ AI-Phising-website-detection-and-risk-analysis-system/
 │   │       ├── logger.py                   # Structured audit logging
 │   │       ├── responses.py                # Uniform JSON API envelopes
 │   │       └── security.py                 # SSRF prevention & redirect hop validation
-│   ├── tests/                              # Automated Pytest Suite (35 Tests)
+│   ├── tests/                              # Automated Pytest Suite (43 Tests)
 │   ├── uploads/                            # Quarantined screenshot uploads
 │   ├── .env.example
 │   ├── .env
@@ -96,7 +96,7 @@ python run.py
 ```
 > The API server starts on **`http://localhost:8000/api`**.
 
-#### Run Backend Test Suite (35 Tests)
+#### Run Backend Test Suite (43 Tests)
 ```powershell
 pytest -v
 ```
@@ -149,6 +149,40 @@ Feature 2 provides visual and structural forensic inspection of web page screens
 
 ---
 
+## ⚖️ Feature 3: Adaptive Phishing Risk Scoring & Evidence Breakdown
+
+PhishGuard AI features an adaptive multi-vector risk scoring engine and evidence breakdown architecture:
+- **Calibrated Multi-Evidence Fusion (0-100 Score):** Synthesizes five orthogonal cybersecurity dimensions:
+  1. `url_lexical` (30% weight): Structural entropy, punycode homoglyphs, subdomain depth, raw IP hostnames, credential parameters.
+  2. `domain_intelligence` (25% weight): SSL certificate validity, ephemeral Free CA vs enterprise EV/OV, certificate age, DNS resolution status, risky TLDs.
+  3. `visual_impersonation` (20% weight): Perceptual visual layout match, color palette proximity, and canonical domain spoofing verification.
+  4. `page_content` (15% weight): Sensitive password inputs, cross-origin form action destinations, and external favicon leeching.
+  5. `redirect_routing` (10% weight): Redirection hop counts, open redirect `//` path tokens, and intermediate hop safety.
+- **Strict 4-Tier Risk Categorization:**
+  - **Low (0 - 29):** Minimal risk indicators observed; verified benign platforms.
+  - **Medium (30 - 59):** Elevated or suspicious anomalies requiring caution.
+  - **High (60 - 79):** Strong phishing signatures or deceptive structural patterns detected.
+  - **Critical (80 - 100):** Severe credential harvesting, brand impersonation, or confirmed malicious payload.
+- **Handling Missing / Unavailable Information:**
+  - In accordance with zero-trust principles, **unobserved features are NEVER treated as proof of safety**.
+  - Weights of observed dimensions are dynamically re-normalized.
+  - Computes `evidence_completeness_pct` and attaches an explicit epistemic **Uncertainty Margin (e.g. ±8 pts)**.
+  - Enforces a baseline safety floor so unobserved sites cannot masquerade as 0% safe without empirical inspection.
+- **Explicit Probability vs Risk Score Separation:**
+  - Clearly distinguishes statistical **Model Probability (0-100%)** from the **Overall Composite Risk Score (0-100)**.
+  - Enforces transparent methodology disclaimers: neither metric represents a guaranteed probability of compromise or absolute safety.
+- **Scan Comparison & Delta Tracking:**
+  - Dedicated `/api/scan/compare` endpoint compares any two historical scans side-by-side.
+  - Quantifies risk score delta ($\Delta Score$), trend direction, newly surfaced risk factors, resolved risk factors, and cryptographic SSL changes.
+- **Configurable Thresholds & Validation Benchmark:**
+  - Endpoints `/api/risk/thresholds` and `/api/risk/evaluate-thresholds` allow security teams to tune category boundaries and evaluate precision, recall, F1-score, and false-positive rates on a ground-truth labeled benchmark dataset.
+- **Frontend Integration:**
+  - `ScanResultsPage`: Risk gauge with 4 categories, Model Prob vs Adaptive Score comparison box, and full `EvidenceBreakdownCard`.
+  - `AdaptiveRiskDashboard`: 4-tier KPI metrics, Evidence Dimension Telemetry, and live Threshold Calibration & Benchmark Evaluator.
+  - `ScanHistoryPage`: 4-tier category badges and multi-select side-by-side scan comparison.
+
+---
+
 ## 📡 Complete Backend API Specification
 
 | Method | Endpoint | Description |
@@ -156,8 +190,11 @@ Feature 2 provides visual and structural forensic inspection of web page screens
 | `GET` | `/api/health` | Service liveness probe and database connectivity state |
 | `POST` | `/api/scan` & `/api/scan/url` | Evaluates URL, extracts heuristics, and returns risk assessment |
 | `GET` | `/api/scan/<id>` | Retrieves specific scan intelligence document |
+| `POST` | `/api/scan/compare` | Evaluates threat delta, category shift, and factor variance between 2 scans |
 | `GET` | `/api/history` | Fetches historical scan registry |
-| `GET` | `/api/risk/metrics` | Returns 24h SOC metrics, attack vector share, and brand leaderboard |
+| `GET` | `/api/risk/metrics` | Returns 24h SOC metrics, 4-tier category distribution, and dimension telemetry |
+| `GET` / `POST` | `/api/risk/thresholds` | Retrieves or updates 4-tier classification category thresholds |
+| `POST` | `/api/risk/evaluate-thresholds` | Evaluates category thresholds against ground-truth validation dataset |
 | `POST` | `/api/assistant/explain` | Computes SHAP feature contributions, LIME weights, and decision path |
 | `GET` | `/api/xai/explain/<id>` | Retrieves explainability record for an existing scan ID |
 | `POST` | `/api/screenshot/analyze` | Analyzes uploaded image (PNG/JPG/WebP) or remote URL |

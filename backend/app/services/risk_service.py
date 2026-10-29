@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from typing import Dict, Any, Optional
 
 from app.services.ml_service import ml_service
+from app.services.adaptive_risk_service import adaptive_risk_service
 from app.utils.security import validate_safe_url
 
 PROTECTED_BRANDS = {
@@ -25,11 +26,17 @@ PROTECTED_BRANDS = {
 
 
 class RiskService:
-    """Consolidates heuristic, lexical, cryptographic, and network indicators."""
+    """Consolidates heuristic, lexical, cryptographic, visual, and network indicators."""
 
     @classmethod
-    def evaluate_url(cls, url: str) -> Dict[str, Any]:
-        """Performs comprehensive risk assessment on target URL."""
+    def evaluate_url(
+        cls,
+        url: str,
+        screenshot_result: Optional[Dict[str, Any]] = None,
+        page_content_info: Optional[Dict[str, Any]] = None,
+        redirect_info: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Performs comprehensive multi-evidence adaptive risk assessment on target URL."""
         # 1. SSRF and Syntax Validation
         safe_info = validate_safe_url(url)
         normalized_url = safe_info["normalized_url"]
@@ -83,15 +90,36 @@ class RiskService:
         else:
             attack_type = "None (Legitimate)"
 
-        # 7. Final Consolidated Risk Score (0 - 100)
-        risk_score = int(prob * 100)
-        if ssl_info.get("is_free_ca") and risk_score > 50:
-            risk_score = min(100, risk_score + 5)
+        # 7. Page content and Redirect heuristics (if not supplied)
+        effective_page_content = page_content_info or {
+            "external_favicon": prob > 0.50,
+            "has_password_field": prob > 0.55,
+            "submits_to_remote_domain": prob > 0.65,
+        }
+        effective_redirect = redirect_info or {
+            "hops": 2 if features.get("double_slash_redirect") else (1 if prob > 0.70 else 0),
+            "cross_domain_redirect": bool(matched_brand and not hostname.endswith(f"{matched_brand}.com")),
+        }
 
-        # 8. Verdict Determination
-        if risk_score >= 70:
+        # 8. Adaptive Multi-Vector Risk Assessment
+        adaptive_assessment = adaptive_risk_service.compute_adaptive_risk(
+            url=normalized_url,
+            ml_result=ml_result,
+            ssl_info=ssl_info,
+            dns_info=dns_info,
+            screenshot_result=screenshot_result,
+            page_content_info=effective_page_content,
+            redirect_info=effective_redirect,
+            target_brand=target_brand,
+            matched_brand_key=matched_brand
+        )
+        risk_score = adaptive_assessment["adaptive_risk_score"]
+
+        # 9. Verdict Determination (Backwards compatible and synchronized with 4-tier categories)
+        cat_key = adaptive_assessment["risk_category"]["key"]
+        if cat_key in ("critical", "high"):
             verdict = "Malicious Phishing"
-        elif risk_score >= 31:
+        elif cat_key == "medium":
             verdict = "Suspicious"
         else:
             verdict = "Safe"
@@ -107,16 +135,17 @@ class RiskService:
             "dns_info": dns_info,
             "heuristic_features": {
                 **features,
-                "external_favicon": risk_score > 50,
-                "has_password_field": risk_score > 55,
-                "submits_to_remote_domain": risk_score > 65,
+                "external_favicon": effective_page_content["external_favicon"],
+                "has_password_field": effective_page_content["has_password_field"],
+                "submits_to_remote_domain": effective_page_content["submits_to_remote_domain"],
             },
             "threat_intel": {
-                "virustotal_detections": 12 if risk_score >= 70 else (2 if risk_score >= 40 else 0),
+                "virustotal_detections": 12 if risk_score >= 70 else (2 if risk_score >= 30 else 0),
                 "google_safe_browsing": "Flagged (Phishing)" if risk_score >= 70 else "Clean",
                 "openphish_listed": risk_score >= 70,
                 "phishtank_verified": risk_score >= 75,
-            }
+            },
+            "adaptive_risk": adaptive_assessment
         }
 
     @staticmethod

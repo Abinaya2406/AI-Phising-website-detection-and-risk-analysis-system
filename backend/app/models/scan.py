@@ -17,6 +17,7 @@ class ScanHistoryModel:
         dns_info: Optional[Dict[str, Any]] = None,
         heuristic_features: Optional[Dict[str, Any]] = None,
         threat_intel: Optional[Dict[str, Any]] = None,
+        adaptive_risk: Optional[Dict[str, Any]] = None,
         is_demo: bool = False
     ) -> Dict[str, Any]:
         return {
@@ -32,6 +33,7 @@ class ScanHistoryModel:
             "dns_info": dns_info or {},
             "heuristic_features": heuristic_features or {},
             "threat_intel": threat_intel or {},
+            "adaptive_risk": adaptive_risk or {},
             "is_demo": is_demo,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
